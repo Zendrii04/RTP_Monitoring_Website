@@ -1,27 +1,70 @@
-# React + TypeScript + Vite
+# Rizal Through Play (RTP) - Instructor Monitoring Website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the instructor monitoring platform for **Rizal Through Play**, built with React, TypeScript, and Vite. The website allows instructors to track student progress in real-time using data synced from the Unity-based game.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. Instructor Authentication & Profile Management
+- Secure Login & Signup for instructors.
+- Password recovery and "Remember Me" functionality.
+- Profile management (update Name, Username, Email, Password, and Profile Photo).
+- Uses Firebase Authentication.
 
-## Expanding the ESLint configuration
+### 2. Monitoring Dashboard
+Real-time tracking of student metrics synced from Unity, including:
+- Student Name & Email
+- Sex & Year Level
+- Checkpoints Finished
+- Time Played (Total Hours)
+- Current Chapter & Last Completed Chapter
+- Total Puzzles Solved
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+### 3. Theming & UI
+- Multiple UI Themes: **Dark**, **Light**, **Midnight Purple**, and **Ocean Blue**.
+- High-contrast text colors optimized for accessibility.
 
-- Configure the top-level `parserOptions` property like this:
+### 4. Communication & Feedback
+- **Message of the Day**: Dashboard banner for instructor announcements.
+- **Feedback System**: Instructors can submit ratings and text feedback to improve the system.
+- **Instructional Media**: "How to Use" video demo of the dashboard.
 
-```js
-   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-   },
+---
+
+## 🛠️ Technical Stack
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Custom CSS with CSS Variables for theming
+- **Backend / Database**: Firebase (Auth, Firestore, Storage)
+- **Routing**: React Router DOM
+
+---
+
+## 💻 Running the Project Locally
+
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org/) installed on your computer.
+
+### 1. Install Dependencies
+Open a terminal in the project folder and run:
+```bash
+npm install
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+### 2. Setup Firebase
+If you haven't already, configure your Firebase connection:
+1. Go to your Firebase Console.
+2. Enable **Authentication** (Email/Password).
+3. Enable **Firestore Database** (Start in Test Mode).
+4. Enable **Storage** (Start in Test Mode).
+5. Ensure your API keys are correctly placed in `src/firebase.ts`.
+
+### 3. Start the Development Server
+```bash
+npm run dev
+```
+The website will open locally (usually at `http://localhost:5173`).
+
+### 4. Build for Production
+To create a production-ready build:
+```bash
+npm run build
+```
