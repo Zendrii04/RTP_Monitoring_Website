@@ -18,13 +18,13 @@ import { getStorage } from "firebase/storage";
 
 // TODO: Replace each value below with YOUR Firebase project's config.
 const firebaseConfig = {
-  apiKey: "AIzaSyDx_owFfvzUvkpeDZmqqAJpHdn1q6rbs_w",
-  authDomain: "rtp-monitoring-website.firebaseapp.com",
-  projectId: "rtp-monitoring-website",
-  storageBucket: "rtp-monitoring-website.firebasestorage.app",
-  messagingSenderId: "700539045902",
-  appId: "1:700539045902:web:d1866aba2cf32c60b5d45f",
-  measurementId: "G-CYR8CVNE35",
+  apiKey: "AIzaSyDTX6Bm_kQKmBuIFcPkfR7kTtMcHh5rQ4c",
+  authDomain: "rizal-through-play.firebaseapp.com",
+  projectId: "rizal-through-play",
+  storageBucket: "rizal-through-play.firebasestorage.app",
+  messagingSenderId: "218660367575",
+  appId: "1:218660367575:web:1d0d9ee553bbd27d971492",
+  measurementId: "G-XJ2GRLJMFX"
 };
 
 // Initialize Firebase services
