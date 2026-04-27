@@ -71,10 +71,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) await fetchProfile(user.uid);
-      else setProfile(null);
-      setLoading(false);
+      try {
+        setCurrentUser(user);
+        if (user) {
+          await fetchProfile(user.uid);
+        } else {
+          setProfile(null);
+        }
+      } catch (err) {
+        console.error("Failed to restore session. Logging out...", err);
+        setCurrentUser(null);
+        setProfile(null);
+        await signOut(auth).catch(() => {});
+      } finally {
+        setLoading(false);
+      }
     });
     return unsub;
   }, []);
@@ -113,8 +124,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (data: Partial<InstructorProfile>) => {
     if (!currentUser) return;
-    await updateDoc(doc(db, "instructors", currentUser.uid), data);
-    setProfile((prev) => (prev ? { ...prev, ...data } : null));
+    await setDoc(doc(db, "instructors", currentUser.uid), data, { merge: true });
+    setProfile((prev) => (prev ? { ...prev, ...data } : (data as InstructorProfile)));
   };
 
   const uploadProfilePhoto = async (file: File): Promise<string> => {
