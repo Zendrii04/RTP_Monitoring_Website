@@ -7,7 +7,7 @@ const TUTORIAL_KEY = "rtp_tutorial_shown_login";
 // ─── PASTE YOUR GOOGLE DRIVE VIDEO LINK HERE ───────────────────────────────
 // Replace the URL below with your shareable Google Drive link.
 // Make sure the sharing is set to "Anyone with the link can view".
-const HOW_TO_USE_URL = "https://drive.google.com/file/d/YOUR_FILE_ID_HERE/view";
+const HOW_TO_USE_URL = "https://drive.google.com/file/d/1W7ccOhderzIp9EOlmi99MrDa7HkazPQg/view?usp=sharing";
 // ────────────────────────────────────────────────────────────────────────────
 
 const Login: React.FC = () => {
@@ -236,14 +236,14 @@ const Login: React.FC = () => {
                 border: "1px solid var(--clr-border)",
                 ...(isTutorialMode
                   ? {
-                      position: "relative",
-                      zIndex: 9999,
-                      background: "var(--clr-primary)",
-                      color: "#fff",
-                      boxShadow: "var(--shadow-glow)",
-                      transform: "scale(1.03)",
-                      border: "2px solid #fff",
-                    }
+                    position: "relative",
+                    zIndex: 9999,
+                    background: "var(--clr-primary)",
+                    color: "#fff",
+                    boxShadow: "var(--shadow-glow)",
+                    transform: "scale(1.03)",
+                    border: "2px solid #fff",
+                  }
                   : {}),
               }}
             >
