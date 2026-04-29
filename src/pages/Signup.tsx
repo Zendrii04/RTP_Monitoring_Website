@@ -22,7 +22,7 @@ const getStrength = (pw: string) => {
 };
 
 const Signup: React.FC = () => {
-  const { signup } = useAuth();
+  const { signup, checkFieldUnique } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -73,6 +73,25 @@ const Signup: React.FC = () => {
     }
     setLoading(true);
     try {
+      // ── Uniqueness checks before creating the account ────────────────
+      const nameUnique = await checkFieldUnique("name", formData.name);
+      if (!nameUnique) {
+        setGlobalError(
+          `The full name "${formData.name}" is already used by another instructor account. Please use a different name.`
+        );
+        setLoading(false);
+        return;
+      }
+      const usernameUnique = await checkFieldUnique("username", formData.username);
+      if (!usernameUnique) {
+        setGlobalError(
+          `The username "${formData.username}" is already taken. Please choose a different username.`
+        );
+        setLoading(false);
+        return;
+      }
+      // ──────────────────────────────────────────────────────────────────
+
       await signup(formData.email, formData.password, {
         name: formData.name,
         username: formData.username,

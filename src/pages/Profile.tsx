@@ -11,7 +11,7 @@ const validatePassword = (pw: string) => {
 };
 
 const Profile: React.FC = () => {
-  const { profile, updateProfile, updateUserEmail, updateUserPassword, uploadProfilePhoto } =
+  const { profile, updateProfile, updateUserEmail, updateUserPassword, uploadProfilePhoto, checkFieldUnique, currentUser } =
     useAuth();
 
   const [username, setUsername] = useState(profile?.username || "");
@@ -53,11 +53,38 @@ const Profile: React.FC = () => {
     e.preventDefault();
     setProfileError("");
     setProfileSuccess("");
+
+    // ── Uniqueness checks ──────────────────────────────────────────────
+    const uid = currentUser?.uid;
+    const trimmedName = name.trim();
+    const trimmedUsername = username.trim();
+
+    if (trimmedName !== profile?.name) {
+      const nameUnique = await checkFieldUnique("name", trimmedName, uid);
+      if (!nameUnique) {
+        setProfileError(
+          `The full name "${trimmedName}" is already used by another instructor account. Please use a different name.`
+        );
+        return;
+      }
+    }
+
+    if (trimmedUsername !== profile?.username) {
+      const usernameUnique = await checkFieldUnique("username", trimmedUsername, uid);
+      if (!usernameUnique) {
+        setProfileError(
+          `The username "${trimmedUsername}" is already taken. Please choose a different username.`
+        );
+        return;
+      }
+    }
+    // ──────────────────────────────────────────────────────────────────
+
     let emailUpdated = true;
     let emailErrorMsg = "";
 
     try {
-      const updates: Record<string, string> = { username, name };
+      const updates: Record<string, string> = { username: trimmedUsername, name: trimmedName };
       
       if (email !== profile?.email) {
         try {

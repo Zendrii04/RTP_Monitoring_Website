@@ -18,7 +18,7 @@ import {
   browserLocalPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
 
@@ -49,6 +49,7 @@ interface AuthContextType {
   updateUserPassword: (password: string) => Promise<void>;
   updateProfile: (data: Partial<InstructorProfile>) => Promise<void>;
   uploadProfilePhoto: (file: File) => Promise<string>;
+  checkFieldUnique: (field: "name" | "username", value: string, excludeUid?: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -128,6 +129,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setProfile((prev) => (prev ? { ...prev, ...data } : (data as InstructorProfile)));
   };
 
+  /**
+   * Returns true if the value is unique (not used by any other instructor).
+   * Pass excludeUid to ignore the current user's own document.
+   */
+  const checkFieldUnique = async (
+    field: "name" | "username",
+    value: string,
+    excludeUid?: string
+  ): Promise<boolean> => {
+    const q = query(
+      collection(db, "instructors"),
+      where(field, "==", value.trim())
+    );
+    const snap = await getDocs(q);
+    // It's unique if no docs found, or the only match is the current user's own doc
+    return snap.empty || snap.docs.every((d) => d.id === excludeUid);
+  };
+
   const uploadProfilePhoto = async (file: File): Promise<string> => {
     if (!currentUser) throw new Error("Not authenticated");
     const storageRef = ref(storage, `profilePhotos/${currentUser.uid}`);
@@ -151,6 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateUserPassword,
         updateProfile,
         uploadProfilePhoto,
+        checkFieldUnique,
       }}
     >
       {children}
