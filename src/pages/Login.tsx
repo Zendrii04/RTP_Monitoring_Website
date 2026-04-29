@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-const TUTORIAL_KEY = "rtp_tutorial_shown_login";
+const TUTORIAL_KEY = "rtp_tutorial_shown_login_v2";
 
 // ─── PASTE YOUR GOOGLE DRIVE VIDEO LINK HERE ───────────────────────────────
 // Replace the URL below with your shareable Google Drive link.
@@ -32,7 +32,6 @@ const Login: React.FC = () => {
     const hasSeen = localStorage.getItem(TUTORIAL_KEY);
     if (!hasSeen) {
       setShowTutorialPrompt(true);
-      localStorage.setItem(TUTORIAL_KEY, "true");
     }
   }, []);
 
@@ -299,14 +298,20 @@ const Login: React.FC = () => {
             >
               <button
                 className="btn btn-secondary"
-                onClick={() => setShowTutorialPrompt(false)}
+                onClick={() => {
+                  localStorage.setItem(TUTORIAL_KEY, "true");
+                  setShowTutorialPrompt(false);
+                }}
                 style={{ width: "120px" }}
               >
                 No, thanks
               </button>
               <button
                 className="btn btn-primary"
-                onClick={startTutorial}
+                onClick={() => {
+                  localStorage.setItem(TUTORIAL_KEY, "true");
+                  startTutorial();
+                }}
                 style={{ width: "120px" }}
               >
                 Yes, show me
