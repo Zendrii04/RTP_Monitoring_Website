@@ -32,6 +32,7 @@ interface InstructorProfile {
   photoURL: string;
   role: "instructor";
   createdAt: string;
+  uid?: string; // Optional to prevent breaking old references, but should be added moving forward
 }
 
 interface AuthContextType {
@@ -118,6 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         photoURL: "",
         role: "instructor",
         createdAt: new Date().toISOString(),
+        uid: cred.user.uid,
       };
       await setDoc(doc(db, "instructors", cred.user.uid), profileData);
       setProfile(profileData);
