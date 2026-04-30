@@ -17,6 +17,7 @@ import {
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
+  deleteUser,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -96,16 +97,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     data: Omit<InstructorProfile, "role" | "createdAt" | "photoURL">
   ) => {
+    // 1. Create the user in Firebase Auth first so they get 'request.auth != null'
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const profileData: InstructorProfile = {
-      ...data,
-      email,
-      photoURL: "",
-      role: "instructor",
-      createdAt: new Date().toISOString(),
-    };
-    await setDoc(doc(db, "instructors", cred.user.uid), profileData);
-    setProfile(profileData);
+    
+    try {
+      // 2. Now that they are authenticated, perform the uniqueness checks
+      const nameUnique = await checkFieldUnique("name", data.name);
+      if (!nameUnique) {
+        throw new Error(`The full name "${data.name}" is already used by another instructor account. Please use a different name.`);
+      }
+      const usernameUnique = await checkFieldUnique("username", data.username);
+      if (!usernameUnique) {
+        throw new Error(`The username "${data.username}" is already taken. Please choose a different username.`);
+      }
+
+      // 3. If everything is unique, save the profile to Firestore
+      const profileData: InstructorProfile = {
+        ...data,
+        email,
+        photoURL: "",
+        role: "instructor",
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(doc(db, "instructors", cred.user.uid), profileData);
+      setProfile(profileData);
+    } catch (err) {
+      // If validation fails, we must delete the newly created Auth user to leave no trace
+      await deleteUser(cred.user).catch(console.error);
+      throw err; // Pass the error back to Signup.tsx to display to the user
+    }
   };
 
   const login = async (email: string, password: string, remember: boolean) => {
