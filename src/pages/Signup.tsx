@@ -22,7 +22,7 @@ const getStrength = (pw: string) => {
 };
 
 const Signup: React.FC = () => {
-  const { signup, checkFieldUnique } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
