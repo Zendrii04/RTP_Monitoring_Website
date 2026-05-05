@@ -26,6 +26,15 @@ interface StudentData {
 const MOTD =
   "Welcome back! Keep track of your students' progress in Rizal Through Play. Every checkpoint they complete brings them closer to understanding Philippine history. 🇵🇭";
 
+const formatTime = (hours: number): string => {
+  if (!hours || hours === 0) return "0m";
+  if (hours < 1) {
+    const minutes = Math.round(hours * 60);
+    return `${minutes}m`;
+  }
+  return `${hours.toFixed(1)}h`;
+};
+
 const Dashboard: React.FC = () => {
   const { profile } = useAuth();
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -217,7 +226,7 @@ const Dashboard: React.FC = () => {
                         {s.checkpointsFinished}
                       </span>
                     </td>
-                    <td>{s.totalHours}h</td>
+                    <td>{formatTime(s.totalHours)}</td>
                     <td>
                       <span className="badge badge-purple">
                         {s.currentChapter}
