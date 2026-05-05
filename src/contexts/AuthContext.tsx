@@ -19,7 +19,7 @@ import {
   browserSessionPersistence,
   deleteUser,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
 
@@ -32,7 +32,7 @@ interface InstructorProfile {
   photoURL: string;
   role: "instructor";
   createdAt: string;
-  uid?: string; // Optional to prevent breaking old references, but should be added moving forward
+  uid?: string;
 }
 
 interface AuthContextType {
@@ -67,27 +67,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch instructor profile from 'instructors' collection
   const fetchProfile = async (uid: string) => {
-    const snap = await getDoc(doc(db, "users", uid));
-    
+    const snap = await getDoc(doc(db, "instructors", uid));
     if (snap.exists()) {
       setProfile(snap.data() as InstructorProfile);
     } else {
-      // MIGRATION FALLBACK: If not found in 'users', check 'instructors'
-      const oldSnap = await getDoc(doc(db, "instructors", uid));
-      if (oldSnap.exists()) {
-        const oldData = oldSnap.data() as InstructorProfile;
-        
-        // 1. Copy the data to the new 'users' collection
-        await setDoc(doc(db, "users", uid), oldData);
-        
-        // 2. Delete the old document from 'instructors'
-        await deleteDoc(doc(db, "instructors", uid)).catch(err => 
-          console.warn("Could not delete old instructor doc, may require admin permissions:", err)
-        );
-        
-        setProfile(oldData);
-      }
+      setProfile(null);
     }
   };
 
@@ -117,11 +103,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     data: Omit<InstructorProfile, "role" | "createdAt" | "photoURL">
   ) => {
-    // 1. Create the user in Firebase Auth first so they get 'request.auth != null'
+    // 1. Create the user in Firebase Auth
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    
+
     try {
-      // 2. Now that they are authenticated, perform the uniqueness checks
+      // 2. Check uniqueness against 'instructors' collection
       const nameUnique = await checkFieldUnique("name", data.name);
       if (!nameUnique) {
         throw new Error(`The full name "${data.name}" is already used by another instructor account. Please use a different name.`);
@@ -131,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(`The username "${data.username}" is already taken. Please choose a different username.`);
       }
 
-      // 3. If everything is unique, save the profile to Firestore
+      // 3. Save instructor profile to 'instructors' collection
       const profileData: InstructorProfile = {
         ...data,
         email,
@@ -140,12 +126,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: new Date().toISOString(),
         uid: cred.user.uid,
       };
-      await setDoc(doc(db, "users", cred.user.uid), profileData);
+      await setDoc(doc(db, "instructors", cred.user.uid), profileData);
       setProfile(profileData);
     } catch (err) {
-      // If validation fails, we must delete the newly created Auth user to leave no trace
+      // Rollback: delete the Auth user if Firestore write fails
       await deleteUser(cred.user).catch(console.error);
-      throw err; // Pass the error back to Signup.tsx to display to the user
+      throw err;
     }
   };
 
@@ -159,14 +145,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => signOut(auth);
   const resetPassword = (email: string) => sendPasswordResetEmail(auth, email);
-  const updateUserEmail = (email: string) =>
-    updateEmail(currentUser!, email);
-  const updateUserPassword = (password: string) =>
-    updatePassword(currentUser!, password);
+  const updateUserEmail = (email: string) => updateEmail(currentUser!, email);
+  const updateUserPassword = (password: string) => updatePassword(currentUser!, password);
 
+  // Update instructor profile in 'instructors' collection
   const updateProfile = async (data: Partial<InstructorProfile>) => {
     if (!currentUser) return;
-    await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+    await setDoc(doc(db, "instructors", currentUser.uid), data, { merge: true });
     setProfile((prev) => (prev ? { ...prev, ...data } : (data as InstructorProfile)));
   };
 
@@ -180,11 +165,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     excludeUid?: string
   ): Promise<boolean> => {
     const q = query(
-      collection(db, "users"),
+      collection(db, "instructors"),
       where(field, "==", value.trim())
     );
     const snap = await getDocs(q);
-    // It's unique if no docs found, or the only match is the current user's own doc
     return snap.empty || snap.docs.every((d) => d.id === excludeUid);
   };
 
