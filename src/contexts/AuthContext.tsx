@@ -19,7 +19,7 @@ import {
   browserSessionPersistence,
   deleteUser,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
 
@@ -68,8 +68,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (uid: string) => {
-    const snap = await getDoc(doc(db, "instructors", uid));
-    if (snap.exists()) setProfile(snap.data() as InstructorProfile);
+    const snap = await getDoc(doc(db, "users", uid));
+    
+    if (snap.exists()) {
+      setProfile(snap.data() as InstructorProfile);
+    } else {
+      // MIGRATION FALLBACK: If not found in 'users', check 'instructors'
+      const oldSnap = await getDoc(doc(db, "instructors", uid));
+      if (oldSnap.exists()) {
+        const oldData = oldSnap.data() as InstructorProfile;
+        
+        // 1. Copy the data to the new 'users' collection
+        await setDoc(doc(db, "users", uid), oldData);
+        
+        // 2. Delete the old document from 'instructors'
+        await deleteDoc(doc(db, "instructors", uid)).catch(err => 
+          console.warn("Could not delete old instructor doc, may require admin permissions:", err)
+        );
+        
+        setProfile(oldData);
+      }
+    }
   };
 
   useEffect(() => {
@@ -121,7 +140,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: new Date().toISOString(),
         uid: cred.user.uid,
       };
-      await setDoc(doc(db, "instructors", cred.user.uid), profileData);
+      await setDoc(doc(db, "users", cred.user.uid), profileData);
       setProfile(profileData);
     } catch (err) {
       // If validation fails, we must delete the newly created Auth user to leave no trace
@@ -147,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (data: Partial<InstructorProfile>) => {
     if (!currentUser) return;
-    await setDoc(doc(db, "instructors", currentUser.uid), data, { merge: true });
+    await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
     setProfile((prev) => (prev ? { ...prev, ...data } : (data as InstructorProfile)));
   };
 
@@ -161,7 +180,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     excludeUid?: string
   ): Promise<boolean> => {
     const q = query(
-      collection(db, "instructors"),
+      collection(db, "users"),
       where(field, "==", value.trim())
     );
     const snap = await getDocs(q);
