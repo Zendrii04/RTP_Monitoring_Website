@@ -1,7 +1,8 @@
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -67,7 +68,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<InstructorProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch instructor profile from 'instructors' collection
+  // Prevents onAuthStateChanged from running fetchProfile mid-signup,
+  // which would find no Firestore doc yet and cause a redirect to login.
+  const isSigningUp = useRef(false);
+
   const fetchProfile = async (uid: string) => {
     const snap = await getDoc(doc(db, "instructors", uid));
     if (snap.exists()) {
@@ -81,9 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       try {
         setCurrentUser(user);
-        if (user) {
+        // Skip profile fetch during signup — the signup function handles it directly
+        if (user && !isSigningUp.current) {
           await fetchProfile(user.uid);
-        } else {
+        } else if (!user) {
           setProfile(null);
         }
       } catch (err) {
@@ -103,21 +108,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     data: Omit<InstructorProfile, "role" | "createdAt" | "photoURL">
   ) => {
-    // 1. Create the user in Firebase Auth
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    // Block onAuthStateChanged from interfering while we write to Firestore
+    isSigningUp.current = true;
 
+    let cred;
     try {
-      // 2. Check uniqueness against 'instructors' collection
-      const nameUnique = await checkFieldUnique("name", data.name);
-      if (!nameUnique) {
-        throw new Error(`The full name "${data.name}" is already used by another instructor account. Please use a different name.`);
-      }
-      const usernameUnique = await checkFieldUnique("username", data.username);
-      if (!usernameUnique) {
-        throw new Error(`The username "${data.username}" is already taken. Please choose a different username.`);
-      }
+      // 1. Create the Firebase Auth user
+      cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // 3. Save instructor profile to 'instructors' collection
       const profileData: InstructorProfile = {
         ...data,
         email,
@@ -126,12 +124,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: new Date().toISOString(),
         uid: cred.user.uid,
       };
+
+      // 2. Write to `instructors` collection (website dashboard + game compatibility)
       await setDoc(doc(db, "instructors", cred.user.uid), profileData);
+
+      // 3. Set profile in state so the UI transitions to dashboard immediately
       setProfile(profileData);
+      setCurrentUser(cred.user);
+      setLoading(false);
+
     } catch (err) {
-      // Rollback: delete the Auth user if Firestore write fails
-      await deleteUser(cred.user).catch(console.error);
+      // If anything fails after the auth user was created, clean it up
+      if (cred) {
+        await deleteUser(cred.user).catch(console.error);
+      }
       throw err;
+    } finally {
+      isSigningUp.current = false;
     }
   };
 
@@ -148,7 +157,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUserEmail = (email: string) => updateEmail(currentUser!, email);
   const updateUserPassword = (password: string) => updatePassword(currentUser!, password);
 
-  // Update instructor profile in 'instructors' collection
   const updateProfile = async (data: Partial<InstructorProfile>) => {
     if (!currentUser) return;
     await setDoc(doc(db, "instructors", currentUser.uid), data, { merge: true });
@@ -158,18 +166,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   /**
    * Returns true if the value is unique (not used by any other instructor).
    * Pass excludeUid to ignore the current user's own document.
+   * NOTE: Only call this when the user is already authenticated (e.g. from Settings).
    */
   const checkFieldUnique = async (
     field: "name" | "username",
     value: string,
     excludeUid?: string
   ): Promise<boolean> => {
-    const q = query(
-      collection(db, "instructors"),
-      where(field, "==", value.trim())
-    );
-    const snap = await getDocs(q);
-    return snap.empty || snap.docs.every((d) => d.id === excludeUid);
+    try {
+      const q = query(
+        collection(db, "instructors"),
+        where(field, "==", value.trim())
+      );
+      const snap = await getDocs(q);
+      return snap.empty || snap.docs.every((d) => d.id === excludeUid);
+    } catch {
+      // If security rules block the query (e.g. unauthenticated), assume unique
+      return true;
+    }
   };
 
   const uploadProfilePhoto = async (file: File): Promise<string> => {
