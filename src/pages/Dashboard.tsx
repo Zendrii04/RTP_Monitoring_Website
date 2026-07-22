@@ -156,7 +156,7 @@ const Dashboard: React.FC = () => {
             totalHours: d.totalHoursPlayed || 0,
             currentChapter: d.currentChapter || "None",
             lastChapter: d.lastFinishedChapter || "None",
-            puzzlesSolved: d.progress?.puzzlesSolved || 0,
+            puzzlesSolved: d.puzzlesSolved || 0,
           };
         }) as StudentData[];
 
